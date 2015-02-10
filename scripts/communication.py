@@ -107,7 +107,7 @@ class AbstractCommunicationLine(Observable, Thread):
         self.stop()
 
 
-class TCPCommunicationLine(AbstractCommunicationLine):
+class JavaCommunicationLine(AbstractCommunicationLine):
     """An easy to use API for making a dialog on TCP/IP Line
     This class is server class and provides reading and writing socket
     """
@@ -254,3 +254,6 @@ class ROSServiceCommunicationLine(AbstractCommunicationLine):
         """Method called when receiving informations from Subscribers
         """
         self.input_stream += data.data
+
+    def update(self, subject):
+        self.send(subject.recv())

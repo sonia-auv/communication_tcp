@@ -1,19 +1,20 @@
 #!/usr/bin/env python
 
-from auv6_communicator.srv import AddTwoInts
+from auv6_communicator.srv import Test
 import rospy
 
 
-def handle_add_two_ints(req):
+def handle_test_service_server(req):
     print "I received a command"
     return "response string"
 
 
-def add_two_ints_server():
-    rospy.init_node('add_two_ints_server')
-    rospy.Service('add_two_ints', AddTwoInts, handle_add_two_ints)
-    print "Ready to add two ints."
+def test_service_server():
+    rospy.init_node('test_service_server')
+    rospy.Service('test_service_server', Test, handle_test_service_server)
+    print "Ready to get an answer."
     rospy.spin()
 
+
 if __name__ == "__main__":
-    add_two_ints_server()
+    test_service_server()

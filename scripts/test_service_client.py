@@ -2,7 +2,7 @@
 
 import sys
 import rospy
-from auv6_communicator.srv import *
+from auv6_communicator.srv import Test
 
 def add_two_ints_client(x, y):
     rospy.wait_for_service('add_two_ints')
