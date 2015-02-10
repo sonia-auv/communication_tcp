@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package>
+  <name>auv6_communicator</name>
+  <version>0.0.0</version>
+  <description>The auv6_communicator package</description>
+
+  <license>TODO</license>
+  <maintainer email="thibaut.mattio@gmail.com">Thibaut Mattio</maintainer>
+  <author email="thibaut.mattio@gmail.com">Thibaut Mattio</author>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>rospy</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>message_generation</build_depend>
+
+  <run_depend>rospy</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>message_runtime</run_depend>
+</package>
