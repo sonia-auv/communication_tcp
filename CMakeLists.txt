@@ -5,11 +5,13 @@ find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
   message_generation
+  sonia_msgs
+  vision_server
 )
 
 add_service_files(
   FILES
-  Test.srv
+  vision_server_execute_command.srv
 )
 
 generate_messages(

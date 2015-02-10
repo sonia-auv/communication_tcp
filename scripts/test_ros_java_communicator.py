@@ -3,7 +3,7 @@
 import communication
 # ROS imports
 import rospy
-from auv6_communicator.srv import Test as SERVICE_REF
+from vision_server.srv import vision_server_execute_cmd as SERVICE_REF
 import parser
 
 # Set the IP adress of the java socket server, localhost if on the same machine
@@ -11,9 +11,9 @@ TCP_IP = '127.0.0.1'
 # Set the writing port of the socket |-> reading_port = port + 1
 TCP_PORT = 46626
 # Name of this current Node
-NODE_NAME = 'auv6_communicator'
+NODE_NAME = 'test_auv6_communicator'
 # ROS Service name
-SERVICE_NAME = 'test_service_server'
+SERVICE_NAME = 'vision_server_execute_cmd'
 
 
 class ROSJavaCommunicator(object):
@@ -33,15 +33,22 @@ class ROSJavaCommunicator(object):
         self.java_line.start()
         self.ros_service_line.start()
 
+        self.run()
+
         rospy.spin()
+
+    def run(self):
+        while True:
+            self.ros_service_line.send("toto")
 
     def update(self, service):
         response = service.recv()
-        parsed_response = parser.parse_service_response(response)
-        topic = communication.ROSTopicCommunicationLine(
-            parsed_response[0], parsed_response[1])
-        topic.attach(self.java_line)
-        self.topics.append(topic)
+        print(response)
+        # parsed_response = parser.parse_service_response(response)
+        # topic = communication.ROSTopicCommunicationLine(
+        #     parsed_response[0], parsed_response[1])
+        # topic.attach(self.java_line)
+        # self.topics.append(topic)
 
 
 if __name__ == '__main__':

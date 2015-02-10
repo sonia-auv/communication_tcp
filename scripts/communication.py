@@ -192,7 +192,7 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
     and reading topic node_name
     """
 
-    def __init__(self, node_name, writing_topic, reading_topic):
+    def __init__(self, writing_topic, reading_topic):
         """Default Constructor
         init node and topics
         """
