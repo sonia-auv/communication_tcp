@@ -1,6 +1,12 @@
 Remove test config
 ==================
 
+* In communication.py
+  * change recv method to work with array
+    recv must return data[0] and delete it
+  * remove \n to messages from java
+  * handle mutli connexions
+
 * In CMakeList.txt
   * Remove AddTwoInts from add_service_files()
   * Undo all the thing with message_generation

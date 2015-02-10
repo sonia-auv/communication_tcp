@@ -11,7 +11,6 @@ import sys
 # ROS imports
 import rospy
 
-
 # Set a buffer max size for input from socket and output to ROS line
 BUFFER_SIZE = 16
 
@@ -149,7 +148,7 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         Override parent class to add socket closing process
         """
         socket.close()
-        super(TCPCommunicationLine, self).stop()
+        super(JavaCommunicationLine, self).stop()
 
     def _read_from_line(self):
         """Read informations from tcp socket
@@ -159,7 +158,12 @@ class JavaCommunicationLine(AbstractCommunicationLine):
     def send(self, data):
         """Send informations to tcp socket
         """
-        self._client.sendall(data + "\n")
+        rospy.loginfo(
+            "I'm Sending data to Java : \"" +
+            data +
+            "\""
+        )
+        self._client.sendall(data)
 
     def run(self):
         """Method used by thread processing until stop() is used
@@ -169,6 +173,11 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         while self.started:
             self._read_from_line()
             if not self.is_empty():
+                rospy.loginfo(
+                    "I received data from Java : \"" +
+                    self._input_stream +
+                    "\""
+                )
                 self.notify()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -201,6 +210,11 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
         """Send informations to publisher
         """
         self.publisher.publish(data)
+        rospy.loginfo(
+            "I'm sending data to ROS Topic : \"" +
+            self._input_stream +
+            "\""
+        )
 
     def _handle_read_subscribers(self, data):
         """Method called when receiving informations from Subscribers
@@ -223,11 +237,13 @@ class ROSServiceCommunicationLine(AbstractCommunicationLine):
     def __init__(self, _service_name, _service_ref):
         """Default constructor subscribe to service
         """
-        self._service_response = rospy.ServiceProxy(
-            _service_name, _service_ref)
-
         self._service_name = _service_name
         self._service_ref = _service_ref
+
+        self._service_response = rospy.ServiceProxy(
+            self._service_name,
+            self._service_ref
+        )
 
         AbstractCommunicationLine.__init__(self)
 
@@ -236,9 +252,21 @@ class ROSServiceCommunicationLine(AbstractCommunicationLine):
         """
         rospy.wait_for_service(self._service_name)
         try:
+            rospy.loginfo(
+                "I'm sending data to ROS service : \"" +
+                self._input_stream +
+                "\""
+            )
             self._input_stream += str(self._service_response(data))
+            if not self.is_empty():
+                rospy.loginfo(
+                    "I received data from ROS service : \"" +
+                    self._input_stream +
+                    "\""
+                )
+                self.notify()
         except rospy.ServiceException, e:
-            print "Service call failed: %s" % e
+            rospy.logerr("Service call failed: %s" % e)
 
     def run(self):
         """Method used by thread
@@ -246,14 +274,7 @@ class ROSServiceCommunicationLine(AbstractCommunicationLine):
         """
         self.started = True
         while self.started and not rospy.is_shutdown():
-            if not self.is_empty():
-                rospy.loginfo(self._input_stream)
-                self.notify()
-
-    def _handle_read_subscribers(self, data):
-        """Method called when receiving informations from Subscribers
-        """
-        self.input_stream += data.data
+            rospy.spin()
 
     def update(self, subject):
         self.send(subject.recv())

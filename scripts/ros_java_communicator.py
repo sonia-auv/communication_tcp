@@ -32,6 +32,8 @@ class ROSJavaCommunicator(object):
         self.java_line.start()
         self.ros_service_line.start()
 
+        rospy.spin()
+
 
 if __name__ == '__main__':
     ROSJavaCommunicator()
