@@ -8,17 +8,9 @@ from socket import socket
 from threading import Thread
 from std_msgs.msg import String
 import sys
-
 # ROS imports
 import rospy
 
-# Module import
-import logger
-
-__author__ = "Thibaut Mattio"
-__copyright__ = "SONIA, Ecole de technologie superieure"
-__version__ = "0.1"
-__status__ = "Development"
 
 # Set a buffer max size for input from socket and output to ROS line
 BUFFER_SIZE = 16
@@ -52,9 +44,10 @@ class Observable(object):
     def notify(self, modifier=None):
         """Notify all observers that a change occurenced on self
         """
-        for observer in self.observers:
-            if modifier != observer:
-                observer.update(self)
+        if len(self.observers):
+            for observer in self.observers:
+                if modifier != observer:
+                    observer.update(self)
 
 
 class AbstractCommunicationLine(Observable, Thread):
@@ -73,6 +66,7 @@ class AbstractCommunicationLine(Observable, Thread):
         self.started = False
 
         Thread.__init__(self)
+        Observable.__init__(self)
         self.daemon = True
 
     def stop(self):
@@ -143,12 +137,12 @@ class TCPCommunicationLine(AbstractCommunicationLine):
         except:
             if self._server:
                 self._server.close()
-            logger.err('Could not open socket')
+            rospy.logerr('Could not open socket')
             sys.exit(1)
-        logger.info('Server running on port ' + str(self.port))
+        rospy.loginfo('Server running on port ' + str(self.port))
 
         self._client, self._client_ip = self._server.accept()
-        logger.info('Connection from ' + self._client_ip[0])
+        rospy.loginfo('Connection from ' + self._client_ip[0])
 
     def stop(self):
         """Close connexion properly
@@ -201,7 +195,7 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
         rospy.Subscriber(
             self._reading_topic, String, self._handle_read_subscribers)
 
-        super().__init__(self)
+        AbstractCommunicationLine.__init__(self)
 
     def send(self, data):
         """Send informations to publisher
@@ -230,19 +224,19 @@ class ROSServiceCommunicationLine(AbstractCommunicationLine):
         """Default constructor subscribe to service
         """
         self._service_response = rospy.ServiceProxy(
-            self._service_name, self._service_ref)
+            _service_name, _service_ref)
 
         self._service_name = _service_name
         self._service_ref = _service_ref
 
-        super().__init__(self)
+        AbstractCommunicationLine.__init__(self)
 
     def send(self, data):
         """Loop and get information from service
         """
         rospy.wait_for_service(self._service_name)
         try:
-            self.input_stream += self._service_response(data)
+            self._input_stream += str(self._service_response(data))
         except rospy.ServiceException, e:
             print "Service call failed: %s" % e
 
@@ -250,8 +244,10 @@ class ROSServiceCommunicationLine(AbstractCommunicationLine):
         """Method used by thread
         simply keeps python from exiting until this node is stopped
         """
+        self.started = True
         while self.started and not rospy.is_shutdown():
             if not self.is_empty():
+                rospy.loginfo(self._input_stream)
                 self.notify()
 
     def _handle_read_subscribers(self, data):

@@ -1,15 +1,17 @@
 #!/usr/bin/env python
 
-from auv6_communicator.srv import *
+from auv6_communicator.srv import AddTwoInts
 import rospy
 
+
 def handle_add_two_ints(req):
-    print "Returning [%s + %s = %s]"%(req.a, req.b, (req.a + req.b))
-    return AddTwoIntsResponse(req.a + req.b)
+    print "I received a command"
+    return "response string"
+
 
 def add_two_ints_server():
     rospy.init_node('add_two_ints_server')
-    s = rospy.Service('add_two_ints', AddTwoInts, handle_add_two_ints)
+    rospy.Service('add_two_ints', AddTwoInts, handle_add_two_ints)
     print "Ready to add two ints."
     rospy.spin()
 

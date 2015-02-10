@@ -2,32 +2,23 @@
 
 import communications
 import sys
-
-# ROS Imports
 import rospy
-from auv6_communicator.srv import AddTwoInts as SERVICE_REF
-# from vision_server.srv import Service as SERVICE_REF
-
-__author__ = "Thibaut Mattio"
-__copyright__ = "SONIA, Ecole de technologie superieure"
-__version__ = "0.1"
-__status__ = "Development"
+from auv6_communicator.srv import Test as SERVICE_REF
 
 # Set the IP adress of the java socket server, localhost if on the same machine
 TCP_IP = '127.0.0.1'
 # Set the writing port of the socket |-> reading_port = port + 1
 TCP_PORT = 46626
 # Name of this current Node
-NODE_NAME = 'ros_java_communicator'
+NODE_NAME = 'auv6_communicator'
 # ROS Service name
-SERVICE_NAME = 'vision_server'
+SERVICE_NAME = 'add_two_ints'
 
 
 class ROSJavaCommunicator(object):
 
     def __init__(self):
-        self._node_name = 'ros_java_communicator'
-        rospy.init_node(self._node_name, anonymous=False)
+        rospy.init_node(NODE_NAME, anonymous=False)
 
         # self.java_line = communications.JavaCommunicationLine(
         #     TCP_IP, TCP_PORT)
@@ -39,6 +30,7 @@ class ROSJavaCommunicator(object):
 
         self.ros_service_line = communications.ROSServiceCommunicationLine(
             SERVICE_NAME, SERVICE_REF)
+        self.ros_service_line.start()
 
         self.run()
 
@@ -46,7 +38,8 @@ class ROSJavaCommunicator(object):
         i = 0
         while True:
             i += 1
-            self.java_line.send("This is a message from python num " + str(i))
+            # self.java_line.send("This is a message from python num " + str(i))
+            self.ros_service_line.send("This is a message from python num " + str(i))
 
     def update(self, subject):
         sys.stdout.write(subject.recv())
