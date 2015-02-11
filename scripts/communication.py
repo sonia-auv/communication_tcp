@@ -11,45 +11,13 @@ import sys
 # ROS imports
 import rospy
 
+from observer import Observable, Observer
+
 # Set a buffer max size for input from socket and output to ROS line
 BUFFER_SIZE = 16
 
 
-class Observable(object):
-    """Simple Observer class
-    Allow childs class to notify subscribers with notify
-    """
-
-    def __init__(self):
-        """Default Constructor
-        Initiat class attributes
-        """
-        self.observers = []
-
-    def attach(self, observer):
-        """Add a new observer to observers list
-        """
-        if observer not in self.observers:
-            self.observers.append(observer)
-
-    def detach(self, observer):
-        """Remove an observer from observers list
-        """
-        try:
-            self.observers.remove(observer)
-        except ValueError:
-            pass
-
-    def notify(self, modifier=None):
-        """Notify all observers that a change occurenced on self
-        """
-        if len(self.observers):
-            for observer in self.observers:
-                if modifier != observer:
-                    observer.update(self)
-
-
-class AbstractCommunicationLine(Observable, Thread):
+class AbstractCommunicationLine(Observable, Observer, Thread):
     """Abstract methods and attributes for base communication lines
     This will provide a method send to send informations on the line
     and will run as a thread to get information from it
@@ -60,24 +28,32 @@ class AbstractCommunicationLine(Observable, Thread):
     def __init__(self):
         """Default constructor, start connexions
         """
-        self._input_stream = ''
-        self._output_stream = ''
-        self.started = False
-
         Thread.__init__(self)
         Observable.__init__(self)
+        Observer.__init__(self)
+
+        self._input_stream = ''
+        self._output_stream = ''
+        self._connected = False
+        self._running = False
         self.daemon = True
 
+        self._connect()
+        self.start()
+
+    @abc.abstractmethod
     def stop(self):
         """Stop communication line
         """
-        self.started = False
+        self._running = False
 
+    @abc.abstractmethod
     def send(self, data):
         """Send a message on the line
         Abstract method to rewrite
         """
-        pass
+        raise NotImplementedError(
+            "Class %s doesn't implement send()" % (self.__class__.__name__))
 
     def recv(self):
         """Read ouput stream and empty it
@@ -90,14 +66,45 @@ class AbstractCommunicationLine(Observable, Thread):
         """Method launched when object.start() is called on the instanciated
         object
         """
-        pass
+        self._running = True
+        while self.is_running:
+            self._process()
+        self._running = False
 
+    @abc.abstractmethod
+    def _process(self):
+        """Method launched when object.start() is called on the instanciated
+        object
+        """
+        raise NotImplementedError(
+            "Class %s doesn't implement run()" % (self.__class__.__name__))
+
+    @abc.abstractmethod
+    def connect(self):
+        """
+        """
+        raise NotImplementedError(
+            "Class %s doesn't implement connect()" % (self.__class__.__name__))
+
+    @property
     def is_empty(self):
         """Check if the input stream is empty
         """
         if self._input_stream:
             return False
         return True
+
+    @property
+    def is_running(self):
+        """Check if the input stream is empty
+        """
+        return self._running
+
+    @property
+    def is_connected(self):
+        """Check if the input stream is empty
+        """
+        return self._connected
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Default Destructor
@@ -115,6 +122,8 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         """Default constructor
         Initiate variables, Connect the socket and call parent constructor
         """
+        AbstractCommunicationLine.__init__(self)
+
         self.host = host
         self._client_ip = None
         self.port = port
@@ -122,9 +131,6 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         self._buffer_size = 1024
         self._server = None
         self._client = None
-
-        self._connect()
-        AbstractCommunicationLine.__init__(self)
 
     def _connect(self):
         """Connect to the client socket
