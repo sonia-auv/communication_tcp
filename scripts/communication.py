@@ -202,9 +202,12 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
         self._writing_topic = writing_topic
         self._reading_topic = reading_topic
 
+        rospy.loginfo("I am subscribing to ROS Topic : " + self.reading_topic)
         rospy.Subscriber(
             self._reading_topic, String, self._handle_read_subscribers)
-        if self.writing_topic:
+        if self._writing_topic:
+            rospy.loginfo(
+                "I am publising to ROS Topic : " + self.writing_topic)
             self.publisher = rospy.Publisher(
                 self._writing_topic, String, queue_size=20)
 
@@ -214,12 +217,12 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
         """Send informations to publisher
         """
         if self._writing_topic:
-            self.publisher.publish(data)
             rospy.loginfo(
                 "I am sending data to ROS Topic : \"" +
-                self._input_stream +
+                data +
                 "\""
             )
+            self.publisher.publish(data)
         else:
             rospy.warn(
                 "Sorry, you did not provide me any topic to publish on...")
@@ -227,7 +230,12 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
     def _handle_read_subscribers(self, data):
         """Method called when receiving informations from Subscribers
         """
-        self.input_stream += data.data
+        self._input_stream += data.data
+        rospy.loginfo(
+            "I received data from ROS Topic : \"" +
+            self._input_stream +
+            "\""
+        )
         self.notify()
 
     def run(self):

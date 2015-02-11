@@ -21,18 +21,16 @@ class ROSJavaCommunicator(object):
         rospy.init_node(NODE_NAME, anonymous=False)
         self.topics = []
 
-        # self.ros_service_line = communication.ROSServiceCommunicationLine(
-        #     SERVICE_NAME, SERVICE_REF)
-        # self.java_line = communication.JavaCommunicationLine(
-        #     TCP_IP, TCP_PORT)
+        self.ros_service_line = communication.ROSServiceCommunicationLine(
+            SERVICE_NAME, SERVICE_REF)
+        self.java_line = communication.JavaCommunicationLine(
+            TCP_IP, TCP_PORT)
 
-        # self.java_line.attach(self.ros_service_line)
-        # self.ros_service_line.attach(self)
+        self.java_line.attach(self.ros_service_line)
+        self.ros_service_line.attach(self)
 
-        # self.java_line.start()
-        # self.ros_service_line.start()
-
-        self.run()
+        self.java_line.start()
+        self.ros_service_line.start()
 
         rospy.spin()
 
@@ -44,12 +42,10 @@ class ROSJavaCommunicator(object):
         #    self.ros_service_line.send("test", "test", "Webcam", 1)
 
     def update(self, service):
-        print(service.recv())
-        # parsed_response = parser.parse_service_response(response)
-        # topic = communication.ROSTopicCommunicationLine(
-        #     parsed_response[0], parsed_response[1])
-        # topic.attach(self.java_line)
-        # self.topics.append(topic)
+        topic = communication.ROSTopicCommunicationLine('test_talker')
+        self.topics.append(topic)
+        topic.attach(self.java_line)
+        topic.start()
 
 
 if __name__ == '__main__':
