@@ -4,22 +4,13 @@ project(auv6_communicator)
 find_package(catkin REQUIRED COMPONENTS
   rospy
   std_msgs
-  message_generation
-  sonia_msgs
-  vision_server
 )
 
-add_service_files(
-  FILES
-  vision_server_execute_command.srv
-)
-
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-)
 
 catkin_package(
+  DEPENDS
+  rospy
+  std_msgs
 )
 
 include_directories(

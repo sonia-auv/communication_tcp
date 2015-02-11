@@ -138,16 +138,19 @@ class JavaCommunicationLine(AbstractCommunicationLine):
                 self._server.close()
             rospy.logerr('Could not open socket')
             sys.exit(1)
-        rospy.loginfo('Server running on port ' + str(self.port))
+        rospy.loginfo(
+            'Socket server running at : ' +
+            str(self.host) + ":" + str(self.port))
 
         self._client, self._client_ip = self._server.accept()
-        rospy.loginfo('Connection from ' + self._client_ip[0])
+        rospy.loginfo('A client is connected : ' + self._client_ip[0])
 
     def stop(self):
         """Close connexion properly
         Override parent class to add socket closing process
         """
         socket.close()
+        self.started = False
         super(JavaCommunicationLine, self).stop()
 
     def _read_from_line(self):
@@ -159,7 +162,7 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         """Send informations to tcp socket
         """
         rospy.loginfo(
-            "I'm Sending data to Java : \"" +
+            "I am Sending data to Java : \"" +
             data +
             "\""
         )
@@ -244,23 +247,28 @@ class ROSServiceCommunicationLine(AbstractCommunicationLine):
             self._service_name,
             self._service_ref
         )
+        rospy.loginfo("I am connected to Vision Server ROS service")
 
         AbstractCommunicationLine.__init__(self)
 
-    def send(self, data):
+    def send(self, node_name, filterchain_name, media_name, cmd):
         """Loop and get information from service
         """
         rospy.wait_for_service(self._service_name)
         try:
             rospy.loginfo(
-                "I'm sending data to ROS service : \"" +
-                self._input_stream +
+                "I am sending data to Vision Server : \"" +
+                "node_name : " + node_name +
+                " filterchain_name : " + filterchain_name +
+                " media_name : " + media_name +
+                " cmd : " + str(cmd) +
                 "\""
             )
-            self._input_stream += str(self._service_response(data))
+            self._input_stream += str(self._service_response(
+                node_name, filterchain_name, media_name, cmd))
             if not self.is_empty():
                 rospy.loginfo(
-                    "I received data from ROS service : \"" +
+                    "I received data from Vision Server : \"" +
                     self._input_stream +
                     "\""
                 )
