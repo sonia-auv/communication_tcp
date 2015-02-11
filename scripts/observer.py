@@ -31,7 +31,7 @@ class Observable(object):
         except ValueError:
             pass
 
-    def notify(self, modifier=None):
+    def _notify(self, modifier=None):
         """Notify all observers that a change occurenced on self
         """
         if len(self.observers):
@@ -46,6 +46,5 @@ class Observer(object):
 
     __metaclass__ = abc.ABCMeta  # ABC class behaves like abstract
 
-    def update(self):
-        raise NotImplementedError(
-            "Class %s doesn't implement update()" % (self.__class__.__name__))
+    def _update(self, subject):
+        self.send(subject.recv())
