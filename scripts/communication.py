@@ -14,7 +14,7 @@ import rospy
 from observer import Observable, Observer
 
 # Set a buffer max size for input from socket and output to ROS line
-BUFFER_SIZE = 16
+BUFFER_SIZE = 1024
 
 
 class AbstractCommunicationLine(Observable, Observer, Thread):
@@ -42,6 +42,36 @@ class AbstractCommunicationLine(Observable, Observer, Thread):
         self.start()
 
     @abc.abstractmethod
+    def _connect(self):
+        """
+        """
+        raise NotImplementedError(
+            "Class %s doesn't implement connect()" % (self.__class__.__name__))
+
+    @abc.abstractmethod
+    def _process(self):
+        """Method launched when object.start() is called on the instanciated
+        object
+        """
+        raise NotImplementedError(
+            "Class %s doesn't implement run()" % (self.__class__.__name__))
+
+    def run(self):
+        """Method launched when object.start() is called on the instanciated
+        object
+        """
+        self._running = True
+        while self.is_running and not rospy.is_shutdown():
+            self._process()
+        self._running = False
+
+    def recv(self):
+        """Read ouput stream and empty it
+        """
+        tmp_input_stream = self._input_stream
+        self._input_stream = ''
+        return tmp_input_stream
+
     def stop(self):
         """Stop communication line
         """
@@ -54,37 +84,6 @@ class AbstractCommunicationLine(Observable, Observer, Thread):
         """
         raise NotImplementedError(
             "Class %s doesn't implement send()" % (self.__class__.__name__))
-
-    def recv(self):
-        """Read ouput stream and empty it
-        """
-        tmp_input_stream = self._input_stream
-        self._input_stream = ''
-        return tmp_input_stream
-
-    def run(self):
-        """Method launched when object.start() is called on the instanciated
-        object
-        """
-        self._running = True
-        while self.is_running:
-            self._process()
-        self._running = False
-
-    @abc.abstractmethod
-    def _process(self):
-        """Method launched when object.start() is called on the instanciated
-        object
-        """
-        raise NotImplementedError(
-            "Class %s doesn't implement run()" % (self.__class__.__name__))
-
-    @abc.abstractmethod
-    def connect(self):
-        """
-        """
-        raise NotImplementedError(
-            "Class %s doesn't implement connect()" % (self.__class__.__name__))
 
     @property
     def is_empty(self):
@@ -122,15 +121,14 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         """Default constructor
         Initiate variables, Connect the socket and call parent constructor
         """
-        AbstractCommunicationLine.__init__(self)
-
         self.host = host
         self._client_ip = None
         self.port = port
         self._backlog = 5
-        self._buffer_size = 1024
         self._server = None
         self._client = None
+
+        AbstractCommunicationLine.__init__(self)
 
     def _connect(self):
         """Connect to the client socket
@@ -159,41 +157,27 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         self.started = False
         super(JavaCommunicationLine, self).stop()
 
+    def _process(self):
+        """Method used by thread processing until stop() is used
+        Will read on the line and notify observer if there is any informations
+        """
+        self._read_from_line()
+        if not self.is_empty():
+            rospy.loginfo(
+                "I received data from Java : \"" + self._input_stream + "\"")
+            self._notify()
+
     def _read_from_line(self):
         """Read informations from tcp socket
         """
-        self._input_stream += str(self._client.recv(self._buffer_size))
+        self._input_stream += str(self._client.recv(BUFFER_SIZE))
 
     def send(self, data):
         """Send informations to tcp socket
         """
         rospy.loginfo(
-            "I am Sending data to Java : \"" +
-            data +
-            "\""
-        )
+            "I am Sending data to Java : \"" + data + "\"")
         self._client.sendall(data)
-
-    def run(self):
-        """Method used by thread processing until stop() is used
-        Will read on the line and notify observer if there is any informations
-        """
-        self.started = True
-        while self.started:
-            self._read_from_line()
-            if not self.is_empty():
-                rospy.loginfo(
-                    "I received data from Java : \"" +
-                    self._input_stream +
-                    "\""
-                )
-                self.notify()
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Default Destructor
-        Destroy the object correctly
-        """
-        self.stop()
 
 
 class ROSTopicCommunicationLine(AbstractCommunicationLine):
@@ -205,33 +189,30 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
         """Default Constructor
         init node and topics
         """
+        AbstractCommunicationLine.__init__(self)
+
         self._writing_topic = writing_topic
         self._reading_topic = reading_topic
 
-        rospy.loginfo("I am subscribing to ROS Topic : " + self.reading_topic)
+    def _connect(self):
+        """
+        """
+        rospy.loginfo(
+            "I am subscribing to ROS reading topic : " + self._reading_topic)
         rospy.Subscriber(
             self._reading_topic, String, self._handle_read_subscribers)
         if self._writing_topic:
             rospy.loginfo(
-                "I am publising to ROS Topic : " + self.writing_topic)
+                "I am subscribing to ROS writing topic : " +
+                self.writing_topic)
             self.publisher = rospy.Publisher(
                 self._writing_topic, String, queue_size=20)
 
-        AbstractCommunicationLine.__init__(self)
-
-    def send(self, data):
-        """Send informations to publisher
+    def _process(self):
+        """Method used by thread
+        simply keeps python from exiting until this node is stopped
         """
-        if self._writing_topic:
-            rospy.loginfo(
-                "I am sending data to ROS Topic : \"" +
-                data +
-                "\""
-            )
-            self.publisher.publish(data)
-        else:
-            rospy.warn(
-                "Sorry, you did not provide me any topic to publish on...")
+        rospy.spin()
 
     def _handle_read_subscribers(self, data):
         """Method called when receiving informations from Subscribers
@@ -242,34 +223,44 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
             self._input_stream +
             "\""
         )
-        self.notify()
+        self._notify()
 
-    def run(self):
-        """Method used by thread
-        simply keeps python from exiting until this node is stopped
+    def send(self, data):
+        """Send informations to publisher
         """
-        # TODO check if rospy.spin() is useful in this context
-        while self.started and not rospy.is_shutdown():
-            rospy.spin()
+        if self._writing_topic:
+            rospy.loginfo(
+                "I am sending data to ROS Topic : \"" + data + "\"")
+            self.publisher.publish(data)
+        else:
+            rospy.logerror(
+                "Sorry, you did not provide me any topic to publish on...")
 
 
 class ROSServiceCommunicationLine(AbstractCommunicationLine):
     """Initiate a communication with ROS given a service service_name
     """
 
-    def __init__(self, _service_name, _service_ref):
+    def __init__(self, service_name, service_ref):
         """Default constructor subscribe to service
         """
-        self._service_name = _service_name
-        self._service_ref = _service_ref
-
-        self._service_response = rospy.ServiceProxy(
-            self._service_name,
-            self._service_ref
-        )
-        rospy.loginfo("I am connected to Vision Server ROS service")
-
         AbstractCommunicationLine.__init__(self)
+
+        self._service_name = service_name
+        self._service_ref = service_ref
+
+    def _connect(self):
+        """
+        """
+        rospy.loginfo("I am connecting to Vision Server ROS service")
+        self._service_response = rospy.ServiceProxy(
+            self._service_name, self._service_ref)
+
+    def _process(self):
+        """Method used by thread
+        simply keeps python from exiting until this node is stopped
+        """
+        rospy.spin()
 
     def send(self, node_name, filterchain_name, media_name, cmd):
         """Loop and get information from service
@@ -281,28 +272,13 @@ class ROSServiceCommunicationLine(AbstractCommunicationLine):
                 "node_name : " + node_name +
                 " filterchain_name : " + filterchain_name +
                 " media_name : " + media_name +
-                " cmd : " + str(cmd) +
-                "\""
-            )
+                " cmd : " + str(cmd) + "\"")
             self._input_stream += str(self._service_response(
                 node_name, filterchain_name, media_name, cmd))
             if not self.is_empty():
                 rospy.loginfo(
                     "I received data from Vision Server : \"" +
-                    self._input_stream +
-                    "\""
-                )
-                self.notify()
+                    self._input_stream + "\"")
+                self._notify()
         except rospy.ServiceException, e:
             rospy.logerr("Service call failed: %s" % e)
-
-    def run(self):
-        """Method used by thread
-        simply keeps python from exiting until this node is stopped
-        """
-        self.started = True
-        while self.started and not rospy.is_shutdown():
-            rospy.spin()
-
-    def update(self, subject):
-        self.send(subject.recv())
