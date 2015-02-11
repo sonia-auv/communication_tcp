@@ -195,34 +195,40 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
     and reading topic node_name
     """
 
-    def __init__(self, writing_topic, reading_topic):
+    def __init__(self, reading_topic, writing_topic=None):
         """Default Constructor
         init node and topics
         """
         self._writing_topic = writing_topic
         self._reading_topic = reading_topic
 
-        self.publisher = rospy.Publisher(
-            self._writing_topic, String, queue_size=20)
         rospy.Subscriber(
             self._reading_topic, String, self._handle_read_subscribers)
+        if self.writing_topic:
+            self.publisher = rospy.Publisher(
+                self._writing_topic, String, queue_size=20)
 
         AbstractCommunicationLine.__init__(self)
 
     def send(self, data):
         """Send informations to publisher
         """
-        self.publisher.publish(data)
-        rospy.loginfo(
-            "I'm sending data to ROS Topic : \"" +
-            self._input_stream +
-            "\""
-        )
+        if self._writing_topic:
+            self.publisher.publish(data)
+            rospy.loginfo(
+                "I am sending data to ROS Topic : \"" +
+                self._input_stream +
+                "\""
+            )
+        else:
+            rospy.warn(
+                "Sorry, you did not provide me any topic to publish on...")
 
     def _handle_read_subscribers(self, data):
         """Method called when receiving informations from Subscribers
         """
         self.input_stream += data.data
+        self.notify()
 
     def run(self):
         """Method used by thread

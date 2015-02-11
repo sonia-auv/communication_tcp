@@ -7,8 +7,8 @@ Remove test config
   * remove \n to messages from java
   * handle mutli connexions
 
-* In CMakeList.txt
-  * Remove AddTwoInts from add_service_files()
-  * Undo all the thing with message_generation
+* [DONE] In CMakeList.txt
+  * [DONE] Remove AddTwoInts from add_service_files()
+  * [DONE] Undo all the thing with message_generation
     see [http://wiki.ros.org/ROS/Tutorials/CreatingMsgAndSrv]
     comments 2 lines in package.xml aboute dependencies

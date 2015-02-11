@@ -21,27 +21,30 @@ class ROSJavaCommunicator(object):
         rospy.init_node(NODE_NAME, anonymous=False)
         self.topics = []
 
-        self.ros_service_line = communication.ROSServiceCommunicationLine(
-            SERVICE_NAME, SERVICE_REF)
-        self.java_line = communication.JavaCommunicationLine(
-            TCP_IP, TCP_PORT)
+        # self.ros_service_line = communication.ROSServiceCommunicationLine(
+        #     SERVICE_NAME, SERVICE_REF)
+        # self.java_line = communication.JavaCommunicationLine(
+        #     TCP_IP, TCP_PORT)
 
-        self.java_line.attach(self.ros_service_line)
-        self.ros_service_line.attach(self)
+        # self.java_line.attach(self.ros_service_line)
+        # self.ros_service_line.attach(self)
 
         # self.java_line.start()
-        self.ros_service_line.start()
+        # self.ros_service_line.start()
 
         self.run()
 
         rospy.spin()
 
     def run(self):
-        while True:
-            self.ros_service_line.send("test", "test", "Webcam", 1)
+        topic = communication.ROSTopicCommunicationLine('test_talker')
+        self.topics.append(topic)
+        topic.attach(self)
+        # while True:
+        #    self.ros_service_line.send("test", "test", "Webcam", 1)
 
     def update(self, service):
-        pass
+        print(service.recv())
         # parsed_response = parser.parse_service_response(response)
         # topic = communication.ROSTopicCommunicationLine(
         #     parsed_response[0], parsed_response[1])
