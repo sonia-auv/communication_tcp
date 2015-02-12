@@ -33,8 +33,8 @@ class AbstractCommunicationLine(Observable, Observer, Thread):
         Observable.__init__(self)
         Observer.__init__(self)
 
-        self._input_stream = ''
-        self._output_stream = ''
+        self._input_stream = []
+        self._output_stream = []
         self._connected = False
         self._running = False
         self.daemon = True
@@ -69,8 +69,8 @@ class AbstractCommunicationLine(Observable, Observer, Thread):
     def recv(self):
         """Read ouput stream and empty it
         """
-        tmp_input_stream = self._input_stream
-        self._input_stream = ''
+        tmp_input_stream = self._input_stream[0]
+        self._input_stream = self._input_stream[1:]
         return tmp_input_stream
 
     def stop(self):
@@ -90,7 +90,7 @@ class AbstractCommunicationLine(Observable, Observer, Thread):
     def is_empty(self):
         """Check if the input stream is empty
         """
-        if self._input_stream:
+        if len(self._input_stream):
             return False
         return True
 
@@ -165,20 +165,28 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         self._read_from_line()
         if not self.is_empty:
             rospy.loginfo(
-                "I received data from AUV6 : \"" + self._input_stream + "\"")
+                "I received data from AUV6 : \"" +
+                self._input_stream[-1] + "\"")
             self._notify()
+        if len(self._output_stream):
+            rospy.loginfo(
+                "I am Sending data to AUV6 : \"" +
+                self._output_stream[0] + "\"")
+            self._client.sendall(self._output_stream[0])
+            self._output_stream = self._output_stream[:1]
 
     def _read_from_line(self):
         """Read informations from tcp socket
         """
-        self._input_stream += str(self._client.recv(BUFFER_SIZE).rstrip('\n'))
+        line = self._client.makefile().readline()
+        if line:
+            self._input_stream.append(
+                line.rstrip('\n'))
 
     def send(self, data):
         """Send informations to tcp socket
         """
-        rospy.loginfo(
-            "I am Sending data to AUV6 : \"" + data + "\"")
-        self._client.sendall(data)
+        self._output_stream.append(data)
 
     def get_name(self):
         return "AUV6"
@@ -216,15 +224,24 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
         """Method used by thread
         simply keeps python from exiting until this node is stopped
         """
-        rospy.spin()
+        if len(self._output_stream):
+            if self._writing_topic:
+                rospy.loginfo(
+                    "I am sending data to ROS Topic : \"" +
+                    self._output_stream[0] + "\"")
+                self.publisher.publish(self._output_stream[0])
+                self._output_stream = self._output_stream[1:]
+            else:
+                rospy.logerr(
+                    "Sorry, you did not provide me any topic to publish on...")
 
     def _handle_read_subscribers(self, data):
         """Method called when receiving informations from Subscribers
         """
-        self._input_stream += data.data
+        self._input_stream.append(data.data)
         rospy.loginfo(
             "I received data from ROS Topic : \"" +
-            self._input_stream +
+            self._input_stream[-1] +
             "\""
         )
         self._notify()
@@ -232,13 +249,7 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
     def send(self, data):
         """Send informations to publisher
         """
-        if self._writing_topic:
-            rospy.loginfo(
-                "I am sending data to ROS Topic : \"" + data + "\"")
-            self.publisher.publish(data)
-        else:
-            rospy.logerr(
-                "Sorry, you did not provide me any topic to publish on...")
+        self._output_stream.append(data)
 
     def get_name(self):
         return self._reading_topic
@@ -267,28 +278,32 @@ class ROSServiceCommunicationLine(AbstractCommunicationLine):
         """Method used by thread
         simply keeps python from exiting until this node is stopped
         """
-        rospy.spin()
+        if len(self._output_stream):
+            rospy.wait_for_service(self._service_name)
+            try:
+                rospy.loginfo(
+                    "I am sending data to Vision Server : \"" +
+                    "node_name : " + self._output_stream[0][0] +
+                    " filterchain_name : " + self._output_stream[0][1] +
+                    " media_name : " + self._output_stream[0][2] +
+                    " cmd : " + str(self._output_stream[0][3]) + "\"")
+                self._input_stream.append(str(self._service_response(
+                    self._output_stream[0][0], self._output_stream[0][1],
+                    self._output_stream[0][2], self._output_stream[0][3])))
+                self._output_stream = self._output_stream[1:]
+                if not self.is_empty:
+                    rospy.loginfo(
+                        "I received data from Vision Server : \"" +
+                        self._input_stream[-1] + "\"")
+                    self._notify()
+            except rospy.ServiceException, e:
+                rospy.logerr("Service call failed: %s" % e)
 
     def send(self, node_name, filterchain_name, media_name, cmd):
         """Loop and get information from service
         """
-        rospy.wait_for_service(self._service_name)
-        try:
-            rospy.loginfo(
-                "I am sending data to Vision Server : \"" +
-                "node_name : " + node_name +
-                " filterchain_name : " + filterchain_name +
-                " media_name : " + media_name +
-                " cmd : " + str(cmd) + "\"")
-            self._input_stream += str(self._service_response(
-                node_name, filterchain_name, media_name, cmd))
-            if not self.is_empty:
-                rospy.loginfo(
-                    "I received data from Vision Server : \"" +
-                    self._input_stream + "\"")
-                self._notify()
-        except rospy.ServiceException, e:
-            rospy.logerr("Service call failed: %s" % e)
+        self._output_stream.append((
+            node_name, filterchain_name, media_name, cmd))
 
     def _update(self, subject):
         """
