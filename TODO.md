@@ -3,7 +3,7 @@ Remove test config
 
 ROS Communicator
 -------------------
-  * change recv method to work with array recv must return data[0] and delete it
+  * [DONE] change recv method to work with array recv must return data[0] and delete it
   * [DONE] remove \n to messages from java
   * handle mutli connexions from auv6
 
@@ -33,7 +33,7 @@ Debug
 
 ### Kill Process
   * Stop Java then reconnect it
-  * Stop Vision Server then reconnect it
+  * [DONE] Stop Vision Server then reconnect it
   * Stop AUV6 Communicator then reconnect it
 
 ### Stop process

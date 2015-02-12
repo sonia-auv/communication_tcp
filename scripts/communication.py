@@ -309,7 +309,9 @@ class ROSServiceCommunicationLine(AbstractCommunicationLine):
         """
         """
         parsed_str = parser.parse_from_java(subject.recv())
-        self.send(parsed_str[0], parsed_str[1], parsed_str[2], parsed_str[3])
+        if parsed_str:
+            self.send(
+                parsed_str[0], parsed_str[1], parsed_str[2], parsed_str[3])
 
     def get_name(self):
         return self._service_name
