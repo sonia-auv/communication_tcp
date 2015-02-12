@@ -2,6 +2,8 @@
 """
 
 import abc
+# ROS Imports
+import rospy
 
 
 class Observable(object):
@@ -15,29 +17,36 @@ class Observable(object):
         """Default Constructor
         Initiat class attributes
         """
-        self.observers = []
+        self._observers = []
 
     def attach(self, observer):
         """Add a new observer to observers list
         """
-        if observer not in self.observers:
-            self.observers.append(observer)
+        if observer not in self._observers:
+            self._observers.append(observer)
+            rospy.loginfo(
+                "{!s} is now listening {!s}".format(
+                    observer.get_name(), self.get_name()))
+        else:
+            rospy.logwarn(
+                "Try to attach {!s} to {!s}, but it was already listening"
+                .format(observer.get_name(), self.get_name()))
 
     def detach(self, observer):
         """Remove an observer from observers list
         """
         try:
-            self.observers.remove(observer)
+            self._observers.remove(observer)
         except ValueError:
             pass
 
     def _notify(self, modifier=None):
         """Notify all observers that a change occurenced on self
         """
-        if len(self.observers):
-            for observer in self.observers:
+        if len(self._observers):
+            for observer in self._observers:
                 if modifier != observer:
-                    observer.update(self)
+                    observer._update(self)
 
 
 class Observer(object):
@@ -45,6 +54,10 @@ class Observer(object):
     """
 
     __metaclass__ = abc.ABCMeta  # ABC class behaves like abstract
+
+    @abc.abstractmethod
+    def get_name(self):
+        pass
 
     def _update(self, subject):
         self.send(subject.recv())

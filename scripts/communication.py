@@ -12,6 +12,7 @@ import sys
 import rospy
 
 from observer import Observable, Observer
+import parser
 
 # Set a buffer max size for input from socket and output to ROS line
 BUFFER_SIZE = 1024
@@ -162,22 +163,25 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         Will read on the line and notify observer if there is any informations
         """
         self._read_from_line()
-        if not self.is_empty():
+        if not self.is_empty:
             rospy.loginfo(
-                "I received data from Java : \"" + self._input_stream + "\"")
+                "I received data from AUV6 : \"" + self._input_stream + "\"")
             self._notify()
 
     def _read_from_line(self):
         """Read informations from tcp socket
         """
-        self._input_stream += str(self._client.recv(BUFFER_SIZE))
+        self._input_stream += str(self._client.recv(BUFFER_SIZE).rstrip('\n'))
 
     def send(self, data):
         """Send informations to tcp socket
         """
         rospy.loginfo(
-            "I am Sending data to Java : \"" + data + "\"")
+            "I am Sending data to AUV6 : \"" + data + "\"")
         self._client.sendall(data)
+
+    def get_name(self):
+        return "AUV6"
 
 
 class ROSTopicCommunicationLine(AbstractCommunicationLine):
@@ -189,10 +193,10 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
         """Default Constructor
         init node and topics
         """
-        AbstractCommunicationLine.__init__(self)
-
         self._writing_topic = writing_topic
         self._reading_topic = reading_topic
+
+        AbstractCommunicationLine.__init__(self)
 
     def _connect(self):
         """
@@ -233,8 +237,11 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
                 "I am sending data to ROS Topic : \"" + data + "\"")
             self.publisher.publish(data)
         else:
-            rospy.logerror(
+            rospy.logerr(
                 "Sorry, you did not provide me any topic to publish on...")
+
+    def get_name(self):
+        return self._reading_topic
 
 
 class ROSServiceCommunicationLine(AbstractCommunicationLine):
@@ -244,10 +251,10 @@ class ROSServiceCommunicationLine(AbstractCommunicationLine):
     def __init__(self, service_name, service_ref):
         """Default constructor subscribe to service
         """
-        AbstractCommunicationLine.__init__(self)
-
         self._service_name = service_name
         self._service_ref = service_ref
+
+        AbstractCommunicationLine.__init__(self)
 
     def _connect(self):
         """
@@ -275,10 +282,19 @@ class ROSServiceCommunicationLine(AbstractCommunicationLine):
                 " cmd : " + str(cmd) + "\"")
             self._input_stream += str(self._service_response(
                 node_name, filterchain_name, media_name, cmd))
-            if not self.is_empty():
+            if not self.is_empty:
                 rospy.loginfo(
                     "I received data from Vision Server : \"" +
                     self._input_stream + "\"")
                 self._notify()
         except rospy.ServiceException, e:
             rospy.logerr("Service call failed: %s" % e)
+
+    def _update(self, subject):
+        """
+        """
+        parsed_str = parser.parse_from_java(subject.recv())
+        self.send(parsed_str[0], parsed_str[1], parsed_str[2], parsed_str[3])
+
+    def get_name(self):
+        return self._service_name

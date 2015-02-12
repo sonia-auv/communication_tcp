@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import communication
+from observer import Observer
 # ROS imports
 import rospy
 from sonia_msgs.srv import vision_server_execute_cmd as SERVICE_REF
@@ -15,11 +16,11 @@ NODE_NAME = 'auv6_communicator'
 SERVICE_NAME = '/vision_server/vision_server_execute_cmd'
 
 
-class ROSJavaCommunicator(object):
+class ROSJavaCommunicator(Observer):
 
     def __init__(self):
         rospy.init_node(NODE_NAME, anonymous=False)
-        self.topics = []
+        self._topics = []
 
         self.ros_service_line = communication.ROSServiceCommunicationLine(
             SERVICE_NAME, SERVICE_REF)
@@ -29,23 +30,25 @@ class ROSJavaCommunicator(object):
         self.java_line.attach(self.ros_service_line)
         self.ros_service_line.attach(self)
 
-        self.java_line.start()
-        self.ros_service_line.start()
-
         rospy.spin()
 
-    def run(self):
-        topic = communication.ROSTopicCommunicationLine('test_talker')
-        self.topics.append(topic)
-        topic.attach(self)
-        # while True:
-        #    self.ros_service_line.send("test", "test", "Webcam", 1)
+    def _update(self, service):
+        service.recv()  # TODO topic_name = service.recv()
+        topic_name = 'test_talker'
 
-    def update(self, service):
-        topic = communication.ROSTopicCommunicationLine('test_talker')
-        self.topics.append(topic)
+        for topic in self._topics:
+            if topic.get_name() == topic_name:
+                rospy.logwarn(
+                    "Sorry, but {!s} is already listening on topic {!s}"
+                    .format(self.java_line.get_name(), topic.get_name()))
+                return
+
+        topic = communication.ROSTopicCommunicationLine(topic_name)
         topic.attach(self.java_line)
-        topic.start()
+        self._topics.append(topic)
+
+    def get_name(self):
+        return "Control Loop"
 
 
 if __name__ == '__main__':
