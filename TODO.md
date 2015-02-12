@@ -27,9 +27,9 @@ Debug
   * Run Vision Server then run AUV6 Communicator then run Java
 
 ### Communication content
-  * Send empty string
-  * Send none string (int, float, null)
-  * send string with wrong format
+  * [DONE] Send empty string
+  * [DONE] Send none string (int, float, null)
+  * [DONE] send string with wrong format
 
 ### Kill Process
   * Stop Java then reconnect it
