@@ -5,7 +5,7 @@ ROS Communicator
 -------------------
   * [DONE] change recv method to work with array recv must return data[0] and delete it
   * [DONE] remove \n to messages from java
-  * handle mutli connexions from auv6
+  * [DONE] handle mutli connexions from auv6
 
 Java TCP Line
 -------------
@@ -21,10 +21,10 @@ Debug
 ### Launch process
   * Run Java then run AUV6 Communicator then run Vision Server
   * Run Java then run Vision Server then run AUV6 Communicator
-  * Run AUV6 Communicator then run Java then run Vision Server
-  * Run AUV6 Communicator then run Vision Server then run Java
-  * Run Vision Server then run Java then run AUV6 Communicator
-  * Run Vision Server then run AUV6 Communicator then run Java
+  * [DONE] Run AUV6 Communicator then run Java then run Vision Server
+  * [DONE] Run AUV6 Communicator then run Vision Server then run Java
+  * [DONE] Run Vision Server then run Java then run AUV6 Communicator
+  * [DONE] Run Vision Server then run AUV6 Communicator then run Java
 
 ### Communication content
   * [DONE] Send empty string
@@ -32,7 +32,7 @@ Debug
   * [DONE] send string with wrong format
 
 ### Kill Process
-  * Stop Java then reconnect it
+  * [DONE] Stop Java then reconnect it
   * [DONE] Stop Vision Server then reconnect it
   * Stop AUV6 Communicator then reconnect it
 
