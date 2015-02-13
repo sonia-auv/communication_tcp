@@ -123,11 +123,10 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         Initiate variables, Connect the socket and call parent constructor
         """
         self.host = host
-        self._client_ip = None
         self.port = port
         self._backlog = 5
-        self._server = None
-        self._client = None
+        self._socket = None
+        self._clients = []
 
         AbstractCommunicationLine.__init__(self)
 
@@ -135,27 +134,35 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         """Connect to the client socket
         """
         try:
-            self._server = socket()
-            self._server.bind((self.host, self.port))
-            self._server.listen(self._backlog)
+            self._socket = socket()
+            self._socket.bind((self.host, self.port))
+            self._socket.listen(self._backlog)
         except:
-            if self._server:
-                self._server.close()
+            if self._socket:
+                self._socket.close()
             rospy.logerr('Could not open socket')
             sys.exit(1)
         rospy.loginfo(
             'Socket server running at : ' +
             str(self.host) + ":" + str(self.port))
+        self._connexion_thread = Thread(target=self._accept_client)
+        self._connexion_thread.daemon = True
+        self._connexion_thread.start()
 
-        self._client, self._client_ip = self._server.accept()
-        rospy.loginfo('A client is connected : ' + self._client_ip[0])
+    def _accept_client(self):
+        while True:
+            client, client_ip = self._socket.accept()
+            self._clients.append((client, client_ip))
+            rospy.loginfo(
+                'A client is connected : ' + str(self._clients[-1][1][0]) +
+                ':' + str(self._clients[-1][1][1]))
 
     def stop(self):
         """Close connexion properly
         Override parent class to add socket closing process
         """
-        socket.close()
-        self.started = False
+        self._socket.close()
+        self._started = False
         super(JavaCommunicationLine, self).stop()
 
     def _process(self):
@@ -172,16 +179,18 @@ class JavaCommunicationLine(AbstractCommunicationLine):
             rospy.loginfo(
                 "I am Sending data to AUV6 : \"" +
                 self._output_stream[0] + "\"")
-            self._client.sendall(self._output_stream[0])
+            for client in self._clients:
+                client.sendall(self._output_stream[0])
             self._output_stream = self._output_stream[:1]
 
     def _read_from_line(self):
         """Read informations from tcp socket
         """
-        line = self._client.makefile().readline()
-        if line:
-            self._input_stream.append(
-                line.rstrip('\n'))
+        for client in self._clients:
+            line = client[0].makefile().readline()
+            if line:
+                self._input_stream.append(
+                    line.rstrip('\n'))
 
     def send(self, data):
         """Send informations to tcp socket
