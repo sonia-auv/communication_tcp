@@ -34,8 +34,8 @@ Debug
 ### Kill Process
   * [DONE] Stop Java then reconnect it
   * [DONE] Stop Vision Server then reconnect it
-  * Stop AUV6 Communicator then reconnect it
+  * [DO NOT IMPLEMENT] Stop AUV6 Communicator then reconnect it
 
 ### Stop process
-  * Stop AUV6 Communicator while reading on java
-  * Stop Java while reading on AUV6 Communicator
+  * [DO NOT IMPLEMENT] Stop AUV6 Communicator while reading on java
+  * [DONE] Stop Java while reading on AUV6 Communicator

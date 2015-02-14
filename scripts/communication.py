@@ -174,9 +174,6 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         """
         self._read_from_line()
         if not self.is_empty:
-            rospy.loginfo(
-                "I received data from AUV6 : \"" +
-                self._input_stream[-1] + "\"")
             self._notify()
 
     def _read_from_line(self):
@@ -184,14 +181,21 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         """
         for client in self._clients:
             try:
-                line = client[0].makefile().readline()
+                line = client[0].makefile().readline().rstrip('\n')
             except:
-                rospy.logwarn("The client {!s}:{!s} disconnected".format(
-                    client[1][0], client[1][1]))
+                rospy.logerr(
+                    "The client {!s}:{!s} disconnected without closing the "
+                    .format(client[1][0], client[1][1]) + "connexion")
                 self._clients.remove(client)
             if line:
-                self._input_stream.append(
-                    line.rstrip('\n'))
+                rospy.loginfo("I received data from AUV6 : \"" + line + "\"")
+                if line == "END":
+                    rospy.logwarn(
+                        "The client {!s}:{!s} ended the connexion".format(
+                            client[1][0], client[1][1]))
+                    self._clients.remove(client)
+                    return
+                self._input_stream.append(line)
 
     def _write_to_line(self):
         while True:
@@ -204,9 +208,10 @@ class JavaCommunicationLine(AbstractCommunicationLine):
                     try:
                         client[0].send(self._output_stream[0] + "\n")
                     except:
-                        rospy.logwarn(
-                            "The client {!s}:{!s} disconnected".format(
-                                client[1][0], client[1][1]))
+                        rospy.logerr(
+                            "The client {!s}:{!s} disconnected without "
+                            .format(client[1][0], client[1][1]) +
+                            "closing the connexion")
                         self._clients.remove(client)
                 self._output_stream = self._output_stream[1:]
 
