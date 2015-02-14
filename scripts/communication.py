@@ -70,7 +70,7 @@ class AbstractCommunicationLine(Observable, Observer, Thread):
         """Read ouput stream and empty it
         """
         tmp_input_stream = self._input_stream[0]
-        self._input_stream = self._input_stream[1:]
+        self._input_stream.remove(self._input_stream[0])
         return tmp_input_stream
 
     def stop(self):
@@ -146,8 +146,11 @@ class JavaCommunicationLine(AbstractCommunicationLine):
             'Socket server running at : ' +
             str(self.host) + ":" + str(self.port))
         self._connexion_thread = Thread(target=self._accept_client)
+        self._writing_thread = Thread(target=self._write_to_line)
         self._connexion_thread.daemon = True
+        self._writing_thread.daemon = True
         self._connexion_thread.start()
+        self._writing_thread.start()
 
     def _accept_client(self):
         while True:
@@ -175,13 +178,6 @@ class JavaCommunicationLine(AbstractCommunicationLine):
                 "I received data from AUV6 : \"" +
                 self._input_stream[-1] + "\"")
             self._notify()
-        if len(self._output_stream):
-            rospy.loginfo(
-                "I am Sending data to AUV6 : \"" +
-                self._output_stream[0] + "\"")
-            for client in self._clients:
-                client.sendall(self._output_stream[0])
-            self._output_stream = self._output_stream[:1]
 
     def _read_from_line(self):
         """Read informations from tcp socket
@@ -192,6 +188,16 @@ class JavaCommunicationLine(AbstractCommunicationLine):
                 self._input_stream.append(
                     line.rstrip('\n'))
 
+    def _write_to_line(self):
+        while True:
+            if len(self._output_stream):
+                rospy.loginfo(
+                    "I am Sending data to AUV6 : \"" +
+                    self._output_stream[0] + "\"")
+                for client in self._clients:
+                    client[0].sendall(self._output_stream[0])
+                self._output_stream = self._output_stream[1:]
+
     def send(self, data):
         """Send informations to tcp socket
         """
@@ -199,6 +205,9 @@ class JavaCommunicationLine(AbstractCommunicationLine):
 
     def get_name(self):
         return "AUV6"
+
+    def _update(self, subject):
+        self.send(subject.recv())
 
 
 class ROSTopicCommunicationLine(AbstractCommunicationLine):
