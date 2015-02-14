@@ -30,6 +30,9 @@ class ROSJavaCommunicator(Observer):
         self.java_line.attach(self.ros_service_line)
         self.ros_service_line.attach(self)
 
+        topic = communication.ROSTopicCommunicationLine('test_talker')
+        topic.attach(self.java_line)
+
         rospy.spin()
 
     def _update(self, service):

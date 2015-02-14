@@ -183,7 +183,12 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         """Read informations from tcp socket
         """
         for client in self._clients:
-            line = client[0].makefile().readline()
+            try:
+                line = client[0].makefile().readline()
+            except:
+                rospy.logwarn("The client {!s}:{!s} disconnected".format(
+                    client[1][0], client[1][1]))
+                self._clients.remove(client)
             if line:
                 self._input_stream.append(
                     line.rstrip('\n'))
@@ -191,11 +196,18 @@ class JavaCommunicationLine(AbstractCommunicationLine):
     def _write_to_line(self):
         while True:
             if len(self._output_stream):
-                rospy.loginfo(
-                    "I am Sending data to AUV6 : \"" +
-                    self._output_stream[0] + "\"")
                 for client in self._clients:
-                    client[0].sendall(self._output_stream[0])
+                    rospy.loginfo(
+                        "I am Sending data to AUV6 on {!s}:{!s} : \"".format(
+                            client[1][0], client[1][1]) +
+                        self._output_stream[0] + "\"")
+                    try:
+                        client[0].send(self._output_stream[0] + "\n")
+                    except:
+                        rospy.logwarn(
+                            "The client {!s}:{!s} disconnected".format(
+                                client[1][0], client[1][1]))
+                        self._clients.remove(client)
                 self._output_stream = self._output_stream[1:]
 
     def send(self, data):
