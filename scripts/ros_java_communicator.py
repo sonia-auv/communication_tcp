@@ -32,6 +32,7 @@ class ROSJavaCommunicator(Observer):
 
         topic = communication.ROSTopicCommunicationLine('test_talker')
         topic.attach(self.java_line)
+        self._topics.append(topic)
 
         rospy.spin()
 
