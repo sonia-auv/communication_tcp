@@ -6,13 +6,13 @@ Include class for Java and ROS communication
 import abc
 from socket import socket
 from threading import Thread
-from std_msgs.msg import String
 import sys
-# ROS imports
-import rospy
 
+from std_msgs.msg import String
+import rospy
 from observer import Observable, Observer
 import parser
+
 
 # Set a buffer max size for input from socket and output to ROS line
 BUFFER_SIZE = 1024
@@ -47,7 +47,7 @@ class AbstractCommunicationLine(Observable, Observer, Thread):
         """
         """
         raise NotImplementedError(
-            "Class %s doesn't implement connect()" % (self.__class__.__name__))
+            "Class %s doesn't implement connect()" % self.__class__.__name__)
 
     @abc.abstractmethod
     def _process(self):
@@ -55,7 +55,7 @@ class AbstractCommunicationLine(Observable, Observer, Thread):
         object
         """
         raise NotImplementedError(
-            "Class %s doesn't implement run()" % (self.__class__.__name__))
+            "Class %s doesn't implement run()" % self.__class__.__name__)
 
     def run(self):
         """Method launched when object.start() is called on the instanciated
@@ -84,7 +84,7 @@ class AbstractCommunicationLine(Observable, Observer, Thread):
         Abstract method to rewrite
         """
         raise NotImplementedError(
-            "Class %s doesn't implement send()" % (self.__class__.__name__))
+            "Class %s doesn't implement send()" % self.__class__.__name__)
 
     @property
     def is_empty(self):
@@ -105,6 +105,10 @@ class AbstractCommunicationLine(Observable, Observer, Thread):
         """Check if the input stream is empty
         """
         return self._connected
+
+    @abc.abstractmethod
+    def get_name(self):
+        raise NotImplementedError
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Default Destructor
@@ -127,6 +131,7 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         self._backlog = 5
         self._socket = None
         self._clients = []
+        self._started = False
 
         AbstractCommunicationLine.__init__(self)
 
@@ -182,20 +187,20 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         for client in self._clients:
             try:
                 line = client[0].makefile().readline().rstrip('\n')
+                if line:
+                    rospy.loginfo("I received data from AUV6 : \"" + line + "\"")
+                    if line == "END":
+                        rospy.logwarn(
+                            "The client {!s}:{!s} ended the connexion".format(
+                                client[1][0], client[1][1]))
+                        self._clients.remove(client)
+                        return
+                    self._input_stream.append(line)
             except:
                 rospy.logerr(
                     "The client {!s}:{!s} disconnected without closing the "
                     .format(client[1][0], client[1][1]) + "connexion")
                 self._clients.remove(client)
-            if line:
-                rospy.loginfo("I received data from AUV6 : \"" + line + "\"")
-                if line == "END":
-                    rospy.logwarn(
-                        "The client {!s}:{!s} ended the connexion".format(
-                            client[1][0], client[1][1]))
-                    self._clients.remove(client)
-                    return
-                self._input_stream.append(line)
 
     def _write_to_line(self):
         for client in self._clients:
@@ -221,7 +226,7 @@ class JavaCommunicationLine(AbstractCommunicationLine):
     def get_name(self):
         return "AUV6"
 
-    def _update(self, subject):
+    def update(self, subject):
         self.send(subject.recv())
 
 
@@ -338,7 +343,7 @@ class ROSServiceCommunicationLine(AbstractCommunicationLine):
         self._output_stream.append((
             node_name, filterchain_name, media_name, cmd))
 
-    def _update(self, subject):
+    def update(self, subject):
         """
         """
         parsed_str = parser.parse_from_java(subject.recv())

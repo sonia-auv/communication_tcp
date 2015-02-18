@@ -2,7 +2,7 @@
 """
 
 import abc
-# ROS Imports
+
 import rospy
 
 
@@ -46,7 +46,7 @@ class Observable(object):
         if len(self._observers):
             for observer in self._observers:
                 if modifier != observer:
-                    observer._update(self)
+                    observer.update(self)
 
 
 class Observer(object):
@@ -59,5 +59,9 @@ class Observer(object):
     def get_name(self):
         pass
 
-    def _update(self, subject):
+    @abc.abstractmethod
+    def send(self):
+        raise NotImplementedError
+
+    def update(self, subject):
         self.send(subject.recv())
