@@ -2,9 +2,8 @@
 
 import communication
 from observer import Observer
-# ROS imports
 import rospy
-from sonia_msgs.srv import vision_server_execute_cmd as SERVICE_REF
+from sonia_msgs.srv import vision_server_execute_cmd as service_ref
 
 # Set the IP adress of the java socket server, localhost if on the same machine
 TCP_IP = '127.0.0.1'
@@ -23,7 +22,7 @@ class ROSJavaCommunicator(Observer):
         self._topics = []
 
         self.ros_service_line = communication.ROSServiceCommunicationLine(
-            SERVICE_NAME, SERVICE_REF)
+            SERVICE_NAME, service_ref)
         self.java_line = communication.JavaCommunicationLine(
             TCP_IP, TCP_PORT)
 

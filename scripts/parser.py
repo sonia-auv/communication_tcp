@@ -1,15 +1,14 @@
 #!/usr/bin/env python
 
-# ROS Imports
 import rospy
 
 
-def parse_from_java(str):
-    if not len(str):
+def parse_from_java(string_to_parse):
+    if not len(string_to_parse):
         rospy.logerr(
             "I received an empty string from Java")
         return None
-    parsed_tab = str.split(';')
+    parsed_tab = string_to_parse.split(';')
     if len(parsed_tab) != 4:
         if len(parsed_tab) == 0:
             rospy.logerr(
