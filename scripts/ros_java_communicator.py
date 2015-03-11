@@ -29,15 +29,14 @@ class ROSJavaCommunicator(Observer):
         self.java_line.attach(self.ros_service_line)
         self.ros_service_line.attach(self)
 
-        topic = communication.ROSTopicCommunicationLine('test_talker')
-        topic.attach(self.java_line)
-        self._topics.append(topic)
 
         rospy.spin()
 
     def _update(self, service):
-        service.recv()  # TODO topic_name = service.recv()
-        topic_name = 'test_talker'
+        topic_name = service.recv()
+        topic_name += "_result"
+
+        print("Now listening " + topic_name)
 
         for topic in self._topics:
             if topic.get_name() == topic_name:
@@ -52,6 +51,12 @@ class ROSJavaCommunicator(Observer):
 
     def get_name(self):
         return "Control Loop"
+
+    def send(self, data):
+        """Send a message on the line
+        Abstract method to rewrite
+        """
+        print(data)
 
 
 if __name__ == '__main__':
