@@ -34,6 +34,8 @@ class ROSJavaCommunicator(Observer):
 
     def _update(self, service):
         topic_name = service.recv()
+        if topic_name.is_empty:
+            return
         topic_name += "_result"
 
         print("Now listening " + topic_name)
@@ -56,7 +58,24 @@ class ROSJavaCommunicator(Observer):
         """Send a message on the line
         Abstract method to rewrite
         """
-        print(data)
+        rospy.loginfo("I am supposed to send these datas to ROS service : \"" + data + "\"")
+        topic_name = data.replace("response: ","")
+        if topic_name == "''":
+            return
+        topic_name += "_result"
+
+        print("Now listening " + topic_name)
+
+        for topic in self._topics:
+            if topic.get_name() == topic_name:
+                rospy.logwarn(
+                    "Sorry, but {!s} is already listening on topic {!s}"
+                    .format(self.java_line.get_name(), topic.get_name()))
+                return
+
+        topic = communication.ROSTopicCommunicationLine(topic_name)
+        topic.attach(self.java_line)
+        self._topics.append(topic)
 
 
 if __name__ == '__main__':

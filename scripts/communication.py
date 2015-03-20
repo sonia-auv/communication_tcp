@@ -9,6 +9,7 @@ from threading import Thread
 import sys
 
 from std_msgs.msg import String
+from sonia_msgs.msg import filterchain_return_message as ret_str
 import rospy
 from observer import Observable, Observer
 import parser
@@ -221,12 +222,26 @@ class JavaCommunicationLine(AbstractCommunicationLine):
     def send(self, data):
         """Send informations to tcp socket
         """
-        self._output_stream.append(data)
+        for client in self._clients:
+            rospy.loginfo(
+                "I am Sending data to AUV6 on {!s}:{!s} : \"".format(
+                    client[1][0], client[1][1]) +
+                data + "\"")
+            try:
+                client[0].send(data + "\n")
+            except:
+                rospy.logerr(
+                    "The client {!s}:{!s} disconnected without "
+                    .format(client[1][0], client[1][1]) +
+                    "closing the connexion")
+                self._clients.remove(client)
 
     def get_name(self):
         return "AUV6"
 
     def update(self, subject):
+        rospy.loginfo(
+                "I am Sending data to AUV6 :::")
         self.send(subject.recv())
 
 
@@ -250,7 +265,7 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
         rospy.loginfo(
             "I am subscribing to ROS reading topic : " + self._reading_topic)
         rospy.Subscriber(
-            self._reading_topic, String, self._handle_read_subscribers)
+            self._reading_topic, ret_str, self._handle_read_subscribers)
         if self._writing_topic:
             rospy.loginfo(
                 "I am subscribing to ROS writing topic : " +
@@ -276,11 +291,11 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
     def _handle_read_subscribers(self, data):
         """Method called when receiving informations from Subscribers
         """
-        self._input_stream.append(data.data)
+        self._input_stream.append(data.execution_result)
         rospy.loginfo(
             "I received data from ROS Topic : \"" +
             self._input_stream[-1] +
-            "\""
+            "\" - ["+ data.execution_result +"] "
         )
         self._notify()
 

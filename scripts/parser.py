@@ -9,6 +9,7 @@ def parse_from_java(string_to_parse):
             "I received an empty string from Java")
         return None
     parsed_tab = string_to_parse.split(';')
+    print(string_to_parse)
     if len(parsed_tab) != 4:
         if len(parsed_tab) == 0:
             rospy.logerr(
