@@ -205,10 +205,10 @@ class JavaCommunicationLine(AbstractCommunicationLine):
 
     def _write_to_line(self):
         for client in self._clients:
-            rospy.loginfo(
-                "I am Sending data to AUV6 on {!s}:{!s} : \"".format(
-                    client[1][0], client[1][1]) +
-                self._output_stream[0] + "\"")
+            #rospy.loginfo(
+            #    "I am Sending data to AUV6 on {!s}:{!s} : \"".format(
+            #        client[1][0], client[1][1]) +
+            #    self._output_stream[0] + "\"")
             try:
                 client[0].send(self._output_stream[0] + "\n")
             except:
@@ -223,10 +223,10 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         """Send informations to tcp socket
         """
         for client in self._clients:
-            rospy.loginfo(
-                "I am Sending data to AUV6 on {!s}:{!s} : \"".format(
-                    client[1][0], client[1][1]) +
-                data + "\"")
+            #rospy.loginfo(
+            #    "I am Sending data to AUV6 on {!s}:{!s} : \"".format(
+            #        client[1][0], client[1][1]) +
+            #    data + "\"")
             try:
                 client[0].send(data + "\n")
             except:
@@ -240,8 +240,8 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         return "AUV6"
 
     def update(self, subject):
-        rospy.loginfo(
-                "I am Sending data to AUV6 :::")
+        #rospy.loginfo(
+        #        "I am Sending data to AUV6 :::")
         self.send(subject.recv())
 
 
@@ -292,11 +292,11 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
         """Method called when receiving informations from Subscribers
         """
         self._input_stream.append(data.execution_result)
-        rospy.loginfo(
-            "I received data from ROS Topic : \"" +
-            self._input_stream[-1] +
-            "\" - ["+ data.execution_result +"] "
-        )
+        #rospy.loginfo(
+        #    "I received data from ROS Topic : \"" +
+        #    self._input_stream[-1] +
+        #    "\" - ["+ data.execution_result +"] "
+        #)
         self._notify()
 
     def send(self, data):
