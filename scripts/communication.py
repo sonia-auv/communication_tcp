@@ -4,7 +4,7 @@ Include class for Java and ROS communication
 """
 
 import abc
-from socket import socket
+from socket import socket, timeout
 from threading import Thread
 import sys
 
@@ -143,6 +143,8 @@ class JavaCommunicationLine(AbstractCommunicationLine):
             self._socket = socket()
             self._socket.bind((self.host, self.port))
             self._socket.listen(self._backlog)
+            self._socket.settimeout(180)
+            self._socket.setblocking(1)
         except:
             if self._socket:
                 self._socket.close()
@@ -159,6 +161,7 @@ class JavaCommunicationLine(AbstractCommunicationLine):
     def _accept_client(self):
         while True:
             client, client_ip = self._socket.accept()
+
             self._clients.append((client, client_ip))
             rospy.loginfo(
                 'A client is connected : ' + str(self._clients[-1][1][0]) +
@@ -198,10 +201,7 @@ class JavaCommunicationLine(AbstractCommunicationLine):
                         return
                     self._input_stream.append(line)
             except:
-                rospy.logerr(
-                    "The client {!s}:{!s} disconnected without closing the "
-                    .format(client[1][0], client[1][1]) + "connexion")
-                self._clients.remove(client)
+                rospy.logwarn(sys.exc_info()[0])
 
     def _write_to_line(self):
         for client in self._clients:
@@ -216,7 +216,8 @@ class JavaCommunicationLine(AbstractCommunicationLine):
                     "The client {!s}:{!s} disconnected without "
                     .format(client[1][0], client[1][1]) +
                     "closing the connexion")
-                self._clients.remove(client)
+                if self._clients.__contains__(client):
+                    self._clients.remove(client)
         self._output_stream = self._output_stream[1:]
 
     def send(self, data):
@@ -229,12 +230,19 @@ class JavaCommunicationLine(AbstractCommunicationLine):
             #    data + "\"")
             try:
                 client[0].send(data + "\n")
+            except timeout:
+                rospy.logwarn("socket timeout ! Resetting connection ...")
+                self.stop()
+                self._connect()
             except:
                 rospy.logerr(
                     "The client {!s}:{!s} disconnected without "
                     .format(client[1][0], client[1][1]) +
                     "closing the connexion")
+                rospy.logwarn(sys.exc_info()[0])
                 self._clients.remove(client)
+
+
 
     def get_name(self):
         return "AUV6"
