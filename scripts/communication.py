@@ -7,6 +7,7 @@ import abc
 from socket import socket, timeout
 from threading import Thread
 import sys
+import time
 
 from std_msgs.msg import String
 from sonia_msgs.msg import filterchain_return_message as ret_str
@@ -65,6 +66,7 @@ class AbstractCommunicationLine(Observable, Observer, Thread):
         self._running = True
         while self.is_running and not rospy.is_shutdown():
             self._process()
+            time.sleep(0.02)
         self._running = False
 
     def recv(self):
