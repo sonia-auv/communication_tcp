@@ -11,6 +11,7 @@ import sys
 from std_msgs.msg import String
 from sonia_msgs.msg import filterchain_return_message as ret_str
 import rospy
+import time
 from observer import Observable, Observer
 import parser
 
@@ -64,7 +65,9 @@ class AbstractCommunicationLine(Observable, Observer, Thread):
         """
         self._running = True
         while self.is_running and not rospy.is_shutdown():
+            rate = rospy.Rate(20)
             self._process()
+            rate.sleep()
         self._running = False
 
     def recv(self):
@@ -143,7 +146,7 @@ class JavaCommunicationLine(AbstractCommunicationLine):
             self._socket = socket()
             self._socket.bind((self.host, self.port))
             self._socket.listen(self._backlog)
-            self._socket.settimeout(180)
+            self._socket.settimeout(2)
             self._socket.setblocking(1)
         except:
             if self._socket:
@@ -161,7 +164,7 @@ class JavaCommunicationLine(AbstractCommunicationLine):
     def _accept_client(self):
         while True:
             client, client_ip = self._socket.accept()
-
+            self._clients = []
             self._clients.append((client, client_ip))
             rospy.loginfo(
                 'A client is connected : ' + str(self._clients[-1][1][0]) +
@@ -179,25 +182,34 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         """Method used by thread processing until stop() is used
         Will read on the line and notify observer if there is any informations
         """
+        rospy.logwarn("BEFORE READLINE")
         self._read_from_line()
+        rospy.logwarn("AFTER READLINE")
         if not self.is_empty:
             self._notify()
-        while len(self._output_stream):
+        rospy.logwarn("BEFORE OUTPUT_STREAM")
+        if len(self._output_stream):
             self._write_to_line()
+
 
     def _read_from_line(self):
         """Read informations from tcp socket
         """
+        rospy.logwarn("number of clients  : {!s}"
+                    .format(self._clients.__len__()))
         for client in self._clients:
             try:
-                line = client[0].makefile().readline().rstrip('\n')
+                rospy.logwarn("123")
+                line = client[0].recv(1024)
+                """line = client[0].makefile().readline().rstrip('\n')"""
+                rospy.logwarn("1234")
                 if line:
+                    rospy.logwarn("1235")
                     rospy.loginfo("I received data from AUV6 : \"" + line + "\"")
-                    if line == "END":
+                    if line == "END\n":
                         rospy.logwarn(
                             "The client {!s}:{!s} ended the connexion".format(
                                 client[1][0], client[1][1]))
-                        self._clients.remove(client)
                         return
                     self._input_stream.append(line)
             except:
@@ -216,8 +228,7 @@ class JavaCommunicationLine(AbstractCommunicationLine):
                     "The client {!s}:{!s} disconnected without "
                     .format(client[1][0], client[1][1]) +
                     "closing the connexion")
-                if self._clients.__contains__(client):
-                    self._clients.remove(client)
+
         self._output_stream = self._output_stream[1:]
 
     def send(self, data):
@@ -240,7 +251,6 @@ class JavaCommunicationLine(AbstractCommunicationLine):
                     .format(client[1][0], client[1][1]) +
                     "closing the connexion")
                 rospy.logwarn(sys.exc_info()[0])
-                self._clients.remove(client)
 
 
 
@@ -296,6 +306,7 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
                 rospy.logerr(
                     "Sorry, you did not provide me any topic to publish on...")
 
+
     def _handle_read_subscribers(self, data):
         """Method called when receiving informations from Subscribers
         """
@@ -307,6 +318,8 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
         #)
         self._notify()
 
+    def stopTopic(self):
+        self.stop()
     def send(self, data):
         """Send informations to publisher
         """
@@ -369,10 +382,13 @@ class ROSServiceCommunicationLine(AbstractCommunicationLine):
     def update(self, subject):
         """
         """
-        parsed_str = parser.parse_from_java(subject.recv())
-        if parsed_str:
-            self.send(
-                parsed_str[0], parsed_str[1], parsed_str[2], parsed_str[3])
+        splitted = subject.recv().split("\n")
+        for line in splitted:
+            parsed_str = parser.parse_from_java(line)
+            if parsed_str is not None:
+                print("sending informations")
+                self.send(parsed_str[0], parsed_str[1], parsed_str[2], parsed_str[3])
+
 
     def get_name(self):
         return self._service_name

@@ -71,6 +71,7 @@ class ROSJavaCommunicator(Observer):
                 rospy.logwarn(
                     "Sorry, but {!s} is already listening on topic {!s}, resetting topics"
                     .format(self.java_line.get_name(), topic.get_name()))
+                topic.stopTopic()
                 self._topics.remove(topic)
 
         topic = communication.ROSTopicCommunicationLine(topic_name)
