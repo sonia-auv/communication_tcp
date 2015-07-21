@@ -18,7 +18,7 @@ import parser
 
 
 # Set a buffer max size for input from socket and output to ROS line
-BUFFER_SIZE = 1024
+BUFFER_SIZE = 2048
 
 
 class AbstractCommunicationLine(Observable, Observer, Thread):
@@ -66,7 +66,7 @@ class AbstractCommunicationLine(Observable, Observer, Thread):
         """
         self._running = True
         while self.is_running and not rospy.is_shutdown():
-            rate = rospy.Rate(20)
+            rate = rospy.Rate(28)
             self._process()
             rate.sleep()
         self._running = False
@@ -201,7 +201,7 @@ class JavaCommunicationLine(AbstractCommunicationLine):
         for client in self._clients:
             try:
                 rospy.logwarn("123")
-                line = client[0].recv(1024)
+                line = client[0].recv(2048)
                 """line = client[0].makefile().readline().rstrip('\n')"""
                 rospy.logwarn("1234")
                 if line:
