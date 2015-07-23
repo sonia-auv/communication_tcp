@@ -312,11 +312,11 @@ class ROSTopicCommunicationLine(AbstractCommunicationLine):
         """Method called when receiving informations from Subscribers
         """
         self._input_stream.append(data.execution_result)
-        #rospy.loginfo(
-        #    "I received data from ROS Topic : \"" +
-        #    self._input_stream[-1] +
-        #    "\" - ["+ data.execution_result +"] "
-        #)
+        rospy.loginfo(
+            "I received data from ROS Topic : \"" +
+            self._input_stream[-1] +
+            "\" - ["+ data.execution_result +"] "
+        )
         self._notify()
 
     def stopTopic(self):
