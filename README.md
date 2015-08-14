@@ -1,4 +1,4 @@
-# AUV6 Communicator
+# ROS Communication TCP
 
 This ROS Node provide a way to establish a dialog between AUV6 and ROS AUV7.
 
